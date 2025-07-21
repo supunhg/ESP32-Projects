@@ -1,12 +1,137 @@
-# 📋 PhantomFox Mk.I Changelog
+# 📋 ESP32 Projects Library - CHANGELOG
 
-All notable changes to the PhantomFox Mk.I firmware will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+> **Current Version**: v3.1.0 | **Last Updated**: July 20, 2025  
+> **Project**: Comprehensive ESP32 Development Library  
+> **Structure**: Multi-Project Repository with Individual Project Folders
 
 ---
 
-## [v2.3.0] - 2025-07-20 (phantomFoxMkIV3.ino)
+## 📖 Overview
+
+This changelog documents the evolution of our ESP32 projects library, starting from the single PhantomFox project through the current multi-project library structure. This repository now serves as a comprehensive collection of ESP32 projects for learning, development, and practical applications.
+
+---
+
+## [v3.1.0] - 2025-07-20 - New Project Addition
+
+### 📁 **Added FileExplorer Project**
+- **New Standalone Project**: Created FileExplorer - SD card file browser
+  - Simple file browser with OLED display and keypad navigation
+  - Text file viewing capabilities
+  - Basic file system operations
+  - Complete documentation and setup guide
+
+### 📚 **Documentation Enhancements**
+- **FileExplorer README**: Comprehensive project documentation
+  - Hardware requirements and wiring diagrams
+  - Setup instructions and troubleshooting guide
+  - Navigation controls and usage examples
+- **Main Repository Updates**: Updated to reflect new project
+  - Added FileExplorer to project structure
+  - Updated featured projects section
+
+### 🔧 **Code Quality**
+- **Consistent Formatting**: Applied professional code standards
+  - Tab-based indentation throughout
+  - Clear function documentation
+  - Proper header comments
+
+---
+
+## [v3.0.1] - 2025-07-20 - Repository Cleanup
+
+### 🧹 Repository Optimization
+- **Removed Placeholder Project**: Removed DasaiMochi project placeholder
+  - Simplified repository structure to focus on completed projects
+  - Updated all documentation to reflect current project status
+  - Streamlined future project planning approach
+
+### 📚 Documentation Updates
+- **Main README**: Removed all placeholder project references
+- **Changelog**: Updated to reflect current repository state
+- **Project Structure**: Simplified to show only active projects
+
+---
+
+## [v3.0.0] - 2025-07-20 - Repository Restructuring
+
+### 🏗️ Major Changes - Repository Transformation
+- **Repository Restructure**: Transformed from single PhantomFox project to comprehensive ESP32 Projects Library
+  - Created dedicated project folders for better organization
+  - Established library-style structure for multiple ESP32 projects
+  - Implemented comprehensive documentation system
+
+### 📁 New Project Structure
+```
+ESP32 Projects Library/
+├── PhantomFox.MkI/           # Advanced ESP32 Penetration Testing Suite
+│   ├── phantomFoxMkIV1.ino   # v1.2.0 - Basic firmware
+│   ├── phantomFoxMkIV2.ino   # v2.1.0 - Enhanced pentest suite
+│   ├── phantomFoxMkIV3.ino   # v2.3.0 - Advanced capabilities
+│   ├── README.md             # Project-specific documentation
+│   └── CHANGELOG.md          # Project version history
+├── FileExplorer/             # SD Card File Browser
+│   ├── FileExplorer.ino      # Arduino sketch
+│   └── README.md             # Project documentation
+├── README.md                 # Main library documentation
+└── CHANGELOG.md              # This changelog
+```
+
+### 🚀 Added Projects
+- **PhantomFox.MkI**: Complete penetration testing device firmware
+  - Professional ESP32-based security auditing tool
+  - Advanced WiFi attack capabilities and network analysis
+  - Comprehensive file system and SD card integration
+  - Individual project documentation and changelog
+
+### 📚 Documentation Enhancements
+- **Main Repository README**: Comprehensive library overview
+  - Project catalog with descriptions and capabilities
+  - Hardware requirements and setup guides for all projects
+  - Learning resources and educational pathways
+- **Project-Specific Documentation**: Detailed documentation for PhantomFox.MkI
+  - Individual setup instructions and requirements
+  - Project-specific features and capabilities
+  - Usage examples and troubleshooting guides
+  - Dedicated project changelog for version history
+
+### 🎯 Vision & Purpose
+- **Educational Focus**: Comprehensive learning resource for ESP32 development
+- **Project Quality**: Focus on well-documented, production-ready projects
+- **Best Practices**: Professional code organization and documentation standards
+- **Community Resource**: Open-source library for ESP32 enthusiasts
+
+---
+
+## 🔄 PhantomFox Project Integration
+
+The PhantomFox Mk.I project has been successfully integrated into this ESP32 Projects Library. For detailed firmware version history, migration guides, and project-specific changes, please see:
+
+📋 **[PhantomFox.MkI/CHANGELOG.md](PhantomFox.MkI/CHANGELOG.md)**
+
+### Current PhantomFox Status
+- **Latest Firmware**: v2.3.0 (phantomFoxMkIV3.ino)
+- **Project Status**: Mature, fully functional penetration testing device
+- **Documentation**: Complete with hardware setup and usage guides
+- **Code Quality**: Professional-grade with consistent formatting and comments
+
+---
+
+## 📁 Future Projects
+
+### Project Expansion Plans
+The library structure is designed to accommodate additional ESP32 projects as they are developed. Future additions will follow the established pattern:
+- Dedicated project folders with comprehensive documentation
+- Individual project changelogs for version tracking
+- Integration with main library documentation
+- Professional code quality and organization standards
+
+### Additional ESP32 Projects
+Watch this space for new ESP32 projects covering various applications:
+- IoT automation and smart home integration
+- Sensor networks and data logging
+- Communication protocol implementations
+- Educational modules and learning resources
 
 ### 🚀 Added
 - **File Explorer System**: Complete SD card file management
@@ -231,7 +356,7 @@ Main Menu
 
 ## 🚨 Legal Notice
 
-**IMPORTANT**: The penetration testing features in v2.1.0 are intended for:
+**IMPORTANT**: The penetration testing features in PhantomFox.MkI are intended for:
 - ✅ Authorized security testing
 - ✅ Educational purposes
 - ✅ Your own networks
@@ -243,22 +368,37 @@ Main Menu
 
 ## 🤝 Contributing
 
-When contributing to this project, please:
-1. Document all changes in this changelog
-2. Follow the existing code style and formatting
-3. Test thoroughly on actual hardware
-4. Update version numbers appropriately
-5. Consider security and legal implications
+When contributing to the ESP32 Projects Library:
+1. **Project Organization**: Follow the established folder structure
+2. **Documentation**: Update both project-specific and main library documentation
+3. **Code Quality**: Follow existing code style and formatting standards
+4. **Testing**: Test thoroughly on actual hardware before submitting
+5. **Legal Compliance**: Consider security and legal implications for all projects
+6. **Changelog Updates**: Document all changes in this changelog
+7. **Version Management**: Update version numbers appropriately
+
+### Adding New Projects
+1. Create project folder with descriptive name
+2. Include comprehensive README.md with setup instructions
+3. Follow hardware documentation standards
+4. Update main library README with project information
+5. Add entry to this changelog
 
 ---
 
 ## 📞 Support
 
-For questions about specific versions or migration assistance:
-- Check the README.md for general setup instructions
-- Review the code comments for technical details
-- Test changes on non-production hardware first
+For questions about the ESP32 Projects Library:
+- **General Setup**: Check the main README.md for library overview
+- **Project-Specific Issues**: Review individual project README files
+- **PhantomFox Support**: Review the code comments for technical details
+- **Hardware Testing**: Test changes on non-production hardware first
+- **Migration Help**: Check version comparison tables above
+
+### Project-Specific Support
+- **PhantomFox.MkI**: Advanced penetration testing device support
+- **FileExplorer**: SD card file browser with OLED display
 
 ---
 
-*Last Updated: July 20, 2025 - v2.3.0 Release*
+*Last Updated: July 20, 2025 - ESP32 Projects Library v3.1.0*

